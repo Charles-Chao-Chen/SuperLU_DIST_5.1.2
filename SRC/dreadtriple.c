@@ -40,16 +40,21 @@ dreadtriple_dist(FILE *fp, int_t *m, int_t *n, int_t *nonz,
     int_t    *asub, *xa, *row, *col;
     int_t    zero_base = 0;
     
-    /* 	File format:
-     *    First line:  #rows    #non-zero
-     *    Triplet in the rest of lines:
-     *                 row    col    value
+    /* 	File format: matrix market format
      */
+
+    // ignore matrix market hearders for now
+    // i.e., assume unsymmetric real matrices
+    char header[256];
+    while (fgets(header, sizeof(header), fp)) {
+        if (header[0]!='%')
+            break;
+    }   
 
 #ifdef _LONGINT
     fscanf(fp, "%ld%ld%ld", m, n, nonz);
 #else
-    fscanf(fp, "%d%d%d", m, n, nonz);
+    sscanf(header, "%d%d%d", m, n, nonz);
 #endif
 
 #ifdef EXPAND_SYM
