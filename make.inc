@@ -36,9 +36,16 @@ BLASLIB      	= $(LOAD_MKL_SERIAL)
 ## parmetis 4.x.x, 64-bit integer
 # PARMETIS_DIR	:= ${HOME}/Carver/lib/parmetis-4.0.3_64
 
-METISLIB    := -L${PARMETIS_DIR}/build/Linux-x86_64/libmetis -lmetis
-PARMETISLIB := -L${PARMETIS_DIR}/build/Linux-x86_64/libparmetis -lparmetis
-I_PARMETIS  := -I${PARMETIS_DIR}/include -I${PARMETIS_DIR}/metis/include
+METISLIB    ?= -L${PARMETIS_DIR}/build/Linux-x86_64/libmetis -lmetis
+PARMETISLIB ?= -L${PARMETIS_DIR}/build/Linux-x86_64/libparmetis -lparmetis
+I_PARMETIS  ?= -I${PARMETIS_DIR}/include -I${PARMETIS_DIR}/metis/include
+
+# use existing modules on Edison
+ifeq ($(findstring edison,$(shell uname -n)),edison)
+METISLIB     = -L${METIS_DIR}/lib/ -lmetis
+PARMETISLIB  = -L${PARMETIS_DIR}/lib/ -lparmetis
+I_PARMETIS   = -I${METIS_DIR}/include -I${PARMETIS_DIR}/include
+endif
 ############################################################################
 
 # Define the required Fortran libraries, if you use C compiler to link
@@ -57,19 +64,28 @@ RANLIB       	= ranlib
 
 ############################################################################
 # C compiler setup
-CC           	= mpicc
+CC             ?= mpicc
 # CFLAGS should be set to be the C flags that include optimization
-CFLAGS          = -std=c99 -pipe -O2 ${I_PARMETIS}
+CFLAGS         ?= -std=c99 -pipe -O2 ${I_PARMETIS}
 #
 # NOOPTS should be set to be the C flags that turn off any optimization
 NOOPTS		= 
 ############################################################################
 # FORTRAN compiler setup
-FORTRAN         = mpif77
-F90FLAGS	= 
+FORTRAN        ?= mpif77
+F90FLAGS       ?= 
 ############################################################################
-LOADER	        = mpif77
+LOADER	       ?= mpif77
 LOADOPTS	= 
+############################################################################
+ifeq ($(findstring edison,$(shell uname -n)),edison)
+CC = cc
+CFLAGS = -fast -m64 -std=c99 -Wall -DDEBUGlevel=0 -DPRNTlevel=0 -DPROFlevel=0 ${I_PARMETIS}
+FORTRAN = ftn
+F90FLAGS = -fast
+LOADER = $(CC)
+endif
+
 ############################################################################
 #  C preprocessor defs for compilation (-DNoChange, -DAdd_, or -DUpCase)
 #
