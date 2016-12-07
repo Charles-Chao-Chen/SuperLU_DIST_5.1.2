@@ -43,9 +43,17 @@ dreadtriple_dist(FILE *fp, int_t *m, int_t *n, int_t *nonz,
     /* 	File format: matrix market format
      */
 
-    // ignore matrix market hearders for now
-    // i.e., assume unsymmetric real matrices
+    // c boolean
+    typedef enum { false, true } bool;
+ 
+    // read matrix market header
     char header[256];
+    bool symmetric = false;
+    fgets(header, sizeof(header), fp);
+    if(strstr(header,"symmetric")!=NULL) {
+      symmetric = true;
+    }
+    // skip other comments
     while (fgets(header, sizeof(header), fp)) {
         if (header[0]!='%')
             break;
@@ -57,11 +65,11 @@ dreadtriple_dist(FILE *fp, int_t *m, int_t *n, int_t *nonz,
     sscanf(header, "%d%d%d", m, n, nonz);
 #endif
 
-#ifdef EXPAND_SYM
-    new_nonz = 2 * *nonz - *n;
-#else
-    new_nonz = *nonz;
-#endif
+    if (symmetric == true) {
+      new_nonz = 2 * *nonz - *n;
+    } else {
+      new_nonz = *nonz;
+    }
     *m = *n;
     printf("m %lld, n %lld, nonz %lld\n", (long long) *m, (long long) *n, (long long) *nonz);
     dallocateA_dist(*n, new_nonz, nzval, rowind, colptr); /* Allocate storage */
@@ -106,24 +114,20 @@ dreadtriple_dist(FILE *fp, int_t *m, int_t *n, int_t *nonz,
 	    exit(-1);
 	} else {
 	    ++xa[col[nz]];
-#ifdef EXPAND_SYM
-	    if ( row[nz] != col[nz] ) { /* Excluding diagonal */
+	    if ( symmetric == true && row[nz] != col[nz] ) { /* Excluding diagonal */
 	      ++nz;
 	      row[nz] = col[nz-1];
 	      col[nz] = row[nz-1];
 	      val[nz] = val[nz-1];
 	      ++xa[col[nz]];
 	    }
-#endif	
 	    ++nz;
 	}
     }
 
     *nonz = nz;
-#ifdef EXPAND_SYM
-    printf("new_nonz after symmetric expansion:\t%d\n", *nonz);
-#endif
-    
+    if (symmetric == true)
+      printf("new_nonz after symmetric expansion:\t%d\n", *nonz);
 
     /* Initialize the array of column pointers */
     k = 0;
